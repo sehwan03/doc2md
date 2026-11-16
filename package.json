@@ -1,0 +1,16 @@
+{
+  "name": "doc2md-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "HWP/HWPX/PDF/DOCX/XLSX/PPTX to Markdown batch converter",
+  "scripts": {
+    "tauri": "tauri",
+    "build:engine": "node -e \"require('child_process').execFileSync(process.platform==='win32'?'python-engine/venv/Scripts/python.exe':'python-engine/venv/bin/python',['python-engine/build_sidecar.py'],{stdio:'inherit'})\"",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "release": "tauri build --bundles nsis && node -e \"const fs=require('fs'),p=require('path');const d='src-tauri/target/release/bundle/nsis';fs.mkdirSync('release',{recursive:true});for(const f of fs.readdirSync(d).filter(f=>f.endsWith('-setup.exe'))){fs.copyFileSync(p.join(d,f),p.join('release',f));console.log('installer -> '+p.resolve('release',f))}\""
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
