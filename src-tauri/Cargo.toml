@@ -1,6 +1,6 @@
 [package]
 name = "doc2md-app"
-version = "1.0.0"
+version = "0.1.0"
 description = "Batch convert HWP/HWPX/PDF/DOCX/XLSX/PPTX documents to Markdown"
 edition = "2021"
 

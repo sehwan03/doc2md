@@ -168,11 +168,20 @@ fn parse_engine_output(stdout: &[u8]) -> Result<EngineResult, String> {
 }
 
 async fn convert_one(app: &AppHandle, file: &TargetFile, output_dir: &Path) -> Result<String, String> {
+    let out_path = output_dir.join(&file.relative_out_path);
+    if let Some(parent) = out_path.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("출력 폴더 생성 실패: {e}"))?;
+    }
+    let out_arg = out_path.to_string_lossy().to_string();
+
+    // --out lets the engine save extracted images in "<stem>_images/" next to the .md.
     let command = app
         .shell()
         .sidecar("converter-engine")
         .map_err(|e| format!("변환 엔진을 찾을 수 없습니다: {e}"))?
-        .args([file.path.as_str()]);
+        .args([file.path.as_str(), "--out", out_arg.as_str()]);
 
     let output = tokio::time::timeout(PER_FILE_TIMEOUT, command.output())
         .await
@@ -192,12 +201,6 @@ async fn convert_one(app: &AppHandle, file: &TargetFile, output_dir: &Path) -> R
         return Err(result.error.unwrap_or_else(|| "알 수 없는 오류".into()));
     }
 
-    let out_path = output_dir.join(&file.relative_out_path);
-    if let Some(parent) = out_path.parent() {
-        tokio::fs::create_dir_all(parent)
-            .await
-            .map_err(|e| format!("출력 폴더 생성 실패: {e}"))?;
-    }
     tokio::fs::write(&out_path, result.markdown.unwrap_or_default())
         .await
         .map_err(|e| format!("파일 저장 실패: {e}"))?;

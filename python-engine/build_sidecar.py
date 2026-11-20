@@ -40,6 +40,7 @@ def main() -> None:
         "--specpath", str(HERE / "build"),
         "--paths", str(HERE),
         "--hidden-import", "hwp_converters",
+        "--hidden-import", "md_images",
         "--collect-all", "markitdown",
         "--collect-all", "magika",
         "--collect-data", "pdfminer",

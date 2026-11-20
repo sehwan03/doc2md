@@ -1,6 +1,9 @@
 """doc2md converter engine CLI.
 
-Usage: converter-engine <file-path>
+Usage: converter-engine <file-path> [--out <markdown-output-path>]
+
+With --out, embedded images are written to "<stem>_images/" next to the given
+Markdown path and linked relatively. Without it, images become short notes.
 
 Writes a single UTF-8 JSON object to stdout:
   {"success": bool, "file_name": str, "markdown": str, "error": str}
@@ -48,7 +51,7 @@ def _write_stdout(payload: bytes) -> None:
         view = view[n:]
 
 
-def convert(path: str) -> dict:
+def convert(path: str, out_md: str | None = None) -> dict:
     result = {"success": False, "file_name": os.path.basename(path), "markdown": "", "error": ""}
     try:
         if not os.path.isfile(path):
@@ -63,8 +66,17 @@ def convert(path: str) -> dict:
 
         # Keep library chatter from corrupting the JSON on stdout.
         with contextlib.redirect_stdout(io.StringIO()):
-            converted = md.convert(path)
-        result["markdown"] = converted.markdown or ""
+            # keep_data_uris hands us the real image bytes; md_images moves them
+            # out of the Markdown so no base64 ever reaches the output.
+            converted = md.convert(path, keep_data_uris=True)
+        markdown = converted.markdown or ""
+
+        from md_images import add_smartart_text, extract_images
+
+        if path.lower().endswith(".pptx"):
+            markdown = add_smartart_text(markdown, path)
+        markdown = extract_images(markdown, out_md)
+        result["markdown"] = markdown
         result["success"] = True
     except Exception as exc:  # noqa: BLE001
         msg = str(exc).strip() or exc.__class__.__name__
@@ -79,7 +91,14 @@ def main() -> int:
     if len(sys.argv) < 2:
         res = {"success": False, "file_name": "", "markdown": "", "error": "변환할 파일 경로가 필요합니다."}
     else:
-        res = convert(sys.argv[1])
+        args = sys.argv[1:]
+        out_md = None
+        if "--out" in args:
+            i = args.index("--out")
+            if i + 1 < len(args):
+                out_md = args[i + 1]
+            del args[i : i + 2]
+        res = convert(args[0], out_md)
     _write_stdout(json.dumps(res, ensure_ascii=False).encode("utf-8"))
     return 0 if res["success"] else 1
 
